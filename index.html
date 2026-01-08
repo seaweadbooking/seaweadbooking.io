@@ -3,62 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <title>Book My Seaweed</title>
-
-  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #e6f7f4;
-      text-align: center;
-      padding: 40px;
-    }
-
-    .box {
-      background: white;
-      padding: 25px;
-      max-width: 500px;
-      margin: auto;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-
-    input, button {
-      width: 95%;
-      padding: 12px;
-      margin: 8px 0;
-      font-size: 16px;
-    }
-
-    button {
-      background: #0a5c5a;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    button.secondary {
-      background: #555;
-    }
-
-    .hidden { display: none; }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-    }
-
-    table, th, td {
-      border: 1px solid #0a5c5a;
-      padding: 8px;
-    }
-
-    th { background-color: #0a5c5a; color: white; }
+    body { font-family: Arial; background: #e6f7f4; text-align:center; padding:40px;}
+    .box { background:white; padding:25px; max-width:500px; margin:auto; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1);}
+    input, button { width:95%; padding:12px; margin:8px 0; font-size:16px;}
+    button { background:#0a5c5a; color:white; border:none; border-radius:6px; cursor:pointer;}
+    button.secondary { background:#555;}
+    .hidden{ display:none;}
+    table{ width:100%; border-collapse:collapse; margin-top:15px;}
+    table, th, td{ border:1px solid #0a5c5a; padding:8px;}
+    th{ background:#0a5c5a; color:white;}
   </style>
 </head>
 <body>
@@ -81,14 +38,17 @@
   <input id="signupName" type="text" placeholder="Full Name">
   <input id="signupEmail" type="email" placeholder="Email">
   <input id="signupPassword" type="password" placeholder="Password">
-  <button onclick="signup()">Sign Up</button>
+  <button onclick="signup()">Sign Up with Email</button>
+  <hr>
+  <p>Or continue with Google (type your name below first)</p>
+  <button onclick="signupGoogle()">Continue with Google</button>
   <p>Already have an account?</p>
   <button class="secondary" onclick="showLogin()">Back to Login</button>
 </div>
 
 <!-- MAIN SITE -->
 <div id="site" class="box hidden">
-  <h2>🌊 Book My Seaweed</h2>
+  <h2>Book My Seaweed</h2>
   <p id="welcome"></p>
 
   <!-- Booking table -->
@@ -115,11 +75,11 @@
 
   <hr>
 
-  <h3>Booking Log (Max 8)</h3>
+  <h3>Booking Log (Max 8, First Come First Served)</h3>
   <table>
     <tr>
       <th>#</th>
-      <th>Email</th>
+      <th>Name / Email</th>
       <th>Day</th>
     </tr>
     <tbody id="bookingLog"></tbody>
@@ -145,50 +105,49 @@
 
   let currentUser = null;
 
-  // Show/hide login/signup
-  function showSignup() {
-    loginBox.classList.add("hidden");
-    signupBox.classList.remove("hidden");
-  }
-  function showLogin() {
-    signupBox.classList.add("hidden");
-    loginBox.classList.remove("hidden");
-  }
+  function showSignup() { loginBox.classList.add("hidden"); signupBox.classList.remove("hidden"); }
+  function showLogin() { signupBox.classList.add("hidden"); loginBox.classList.remove("hidden"); }
 
   // Email login
   function loginEmail() {
-    auth.signInWithEmailAndPassword(
-      loginEmail.value,
-      loginPassword.value
-    ).catch(err => alert(err.message));
+    auth.signInWithEmailAndPassword(loginEmail.value, loginPassword.value)
+      .catch(err => alert(err.message));
   }
 
-  // Signup
+  // Email/Password Sign Up
   function signup() {
-    if (!signupName.value) { alert("Name required"); return; }
+    const name = signupName.value.trim();
+    if(!name){ alert("Name required"); return; }
 
-    auth.createUserWithEmailAndPassword(
-      signupEmail.value,
-      signupPassword.value
-    ).then(result => {
-      result.user.updateProfile({ displayName: signupName.value });
-    }).catch(err => alert(err.message));
+    auth.createUserWithEmailAndPassword(signupEmail.value, signupPassword.value)
+      .then(result => result.user.updateProfile({ displayName: name }))
+      .catch(err => alert(err.message));
   }
 
-  // Google login
-  function loginGoogle() {
+  // Google login for login page
+  function loginGoogle(){
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(() => alert("Google login blocked by browser"));
+    auth.signInWithPopup(provider).catch(()=>alert("Google login blocked by browser"));
+  }
+
+  // Google login for sign up (requires name typed)
+  function signupGoogle(){
+    const name = signupName.value.trim();
+    if(!name){ alert("Please type your name before using Google login"); return; }
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).then(result=>{
+      result.user.updateProfile({displayName: name});
+    }).catch(()=>alert("Google login blocked by browser"));
   }
 
   // Auth state
-  auth.onAuthStateChanged(user => {
-    if (user) {
+  auth.onAuthStateChanged(user=>{
+    if(user){
       currentUser = user;
       loginBox.classList.add("hidden");
       signupBox.classList.add("hidden");
       site.classList.remove("hidden");
-      welcome.innerText = "Welcome, " + (user.displayName || user.email);
+      welcome.innerText = "Welcome, "+(user.displayName || user.email);
       loadBookings();
     } else {
       loginBox.classList.remove("hidden");
@@ -197,73 +156,49 @@
     }
   });
 
-  // Load bookings
-  function loadBookings() {
-    db.collection("bookings")
-      .orderBy("time", "asc")
-      .limit(8)
-      .onSnapshot(snapshot => {
-        const log = document.getElementById("bookingLog");
-        log.innerHTML = "";
+  // Load bookings table
+  function loadBookings(){
+    db.collection("bookings").orderBy("time","asc").limit(8).onSnapshot(snapshot=>{
+      const log = document.getElementById("bookingLog");
+      log.innerHTML = "";
+      let tuesdayBooked=false, thursdayBooked=false;
 
-        let tuesdayBooked = false;
-        let thursdayBooked = false;
-
-        snapshot.docs.forEach((doc, index) => {
-          const data = doc.data();
-          log.innerHTML += `<tr>
-            <td>${index + 1}</td>
-            <td>${data.email}</td>
-            <td>${data.day}</td>
-          </tr>`;
-
-          if (data.day === "Tuesday") {
-            tuesdayBooked = true;
-            document.getElementById("tuesdaySlot").innerText = data.email;
-          }
-
-          if (data.day === "Thursday") {
-            thursdayBooked = true;
-            document.getElementById("thursdaySlot").innerText = data.email;
-          }
-        });
-
-        if (!tuesdayBooked) document.getElementById("tuesdaySlot").innerText = "Available";
-        if (!thursdayBooked) document.getElementById("thursdaySlot").innerText = "Available";
+      snapshot.docs.forEach((doc,index)=>{
+        const data = doc.data();
+        const displayName = data.name || data.email;
+        log.innerHTML+=`<tr><td>${index+1}</td><td>${displayName}</td><td>${data.day}</td></tr>`;
+        if(data.day==="Tuesday"){ tuesdayBooked=true; document.getElementById("tuesdaySlot").innerText=displayName; }
+        if(data.day==="Thursday"){ thursdayBooked=true; document.getElementById("thursdaySlot").innerText=displayName; }
       });
-  }
 
-  // Booking function
-  function bookDay(day) {
-    if (!currentUser) { alert("Login first"); return; }
-
-    db.collection("bookings").get().then(snapshot => {
-      if (snapshot.size >= 8) { alert("Booking limit reached (8)"); return; }
-
-      const alreadyBooked = snapshot.docs.some(doc => doc.data().day === day);
-      if (alreadyBooked) { alert(day + " is already booked"); return; }
-
-      db.collection("bookings").add({
-        email: currentUser.email,
-        day: day,
-        time: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(() => {
-        document.getElementById("message").innerText = "✅ You booked " + day;
-      });
+      if(!tuesdayBooked) document.getElementById("tuesdaySlot").innerText="Available";
+      if(!thursdayBooked) document.getElementById("thursdaySlot").innerText="Available";
     });
   }
 
-  // Logout
-  function logout() {
-    auth.signOut().then(() => location.reload());
-  }
-</script>
+  // Booking function (first come first served)
+  function bookDay(day){
+    if(!currentUser){ alert("Login first"); return; }
 
+    const name = currentUser.displayName || currentUser.email;
+
+    db.collection("bookings").get().then(snapshot=>{
+      if(snapshot.size>=8){ alert("Booking limit reached (8)"); return; }
+
+      const alreadyBooked = snapshot.docs.some(doc=>doc.data().day===day);
+      if(alreadyBooked){ alert(day+" is already booked"); return; }
+
+      db.collection("bookings").add({
+        email: currentUser.email,
+        name: name,
+        day: day,
+        time: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(()=>document.getElementById("message").innerText="You booked "+day);
+    });
+  }
+
+  function logout(){ auth.signOut().then(()=>location.reload()); }
+
+</script>
 </body>
 </html>
-
-
-
-
-
-
