@@ -11,78 +11,103 @@
       padding: 40px;
     }
 
-    h1 {
-      color: #0a5c5a;
-    }
-
-    .calendar {
-      display: flex;
-      justify-content: center;
-      gap: 30px;
-      margin-top: 40px;
-    }
-
-    .day {
+    .box {
       background: white;
-      padding: 25px;
+      padding: 30px;
+      max-width: 350px;
+      margin: auto;
       border-radius: 12px;
-      width: 200px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
 
-    .day h2 {
-      color: #0a5c5a;
+    input {
+      width: 90%;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 16px;
     }
 
     button {
+      padding: 10px 18px;
+      font-size: 16px;
       background-color: #0a5c5a;
       color: white;
       border: none;
-      padding: 10px 18px;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 16px;
     }
 
     button:hover {
       background-color: #08706d;
     }
 
-    #message {
-      margin-top: 30px;
-      font-size: 18px;
-      color: #0a5c5a;
-      font-weight: bold;
+    .hidden {
+      display: none;
     }
   </style>
 </head>
 <body>
 
+<!-- LOGIN -->
+<div id="loginBox" class="box">
+  <h2>Login</h2>
+  <input id="username" placeholder="Username">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <p id="error" style="color:red;"></p>
+</div>
+
+<!-- WEBSITE -->
+<div id="site" class="hidden">
   <h1>🌊 Book My Seaweed</h1>
-  <p>Select an available day to book</p>
+  <p>Welcome, <span id="user"></span>!</p>
 
-  <div class="calendar">
-    <div class="day">
-      <h2>Tuesday</h2>
-      <p>Available</p>
-      <button onclick="book('Tuesday')">Book</button>
-    </div>
+  <button onclick="book('Tuesday')">Book Tuesday</button>
+  <button onclick="book('Thursday')">Book Thursday</button>
 
-    <div class="day">
-      <h2>Thursday</h2>
-      <p>Available</p>
-      <button onclick="book('Thursday')">Book</button>
-    </div>
-  </div>
+  <p id="message"></p>
+  <br>
+  <button onclick="logout()">Logout</button>
+</div>
 
-  <div id="message"></div>
+<script>
+  const VALID_USER = "admin";
+  const VALID_PASS = "1234";
 
-  <script>
-    function book(day) {
-      document.getElementById("message").innerText =
-        "✅ Your seaweed has been booked for " + day + "!";
+  if (localStorage.getItem("loggedIn")) {
+    showSite();
+  }
+
+  function login() {
+    const u = document.getElementById("username").value;
+    const p = document.getElementById("password").value;
+
+    if (u === VALID_USER && p === VALID_PASS) {
+      localStorage.setItem("loggedIn", "true");
+      localStorage.setItem("user", u);
+      showSite();
+    } else {
+      document.getElementById("error").innerText = "Invalid login";
     }
-  </script>
+  }
+
+  function showSite() {
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("site").classList.remove("hidden");
+    document.getElementById("user").innerText =
+      localStorage.getItem("user");
+  }
+
+  function logout() {
+    localStorage.clear();
+    location.reload();
+  }
+
+  function book(day) {
+    document.getElementById("message").innerText =
+      "✅ Seaweed booked for " + day;
+  }
+</script>
 
 </body>
 </html>
