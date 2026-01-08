@@ -21,8 +21,10 @@ th{ background:#0a5c5a; color:white;}
 <body>
 
 <!-- SIGN UP / LOGIN -->
-<div id="signupBox" class="box">
+<div id="authBox" class="box">
 <h2>Sign Up / Login</h2>
+
+<h3>Sign Up</h3>
 <input id="signupName" type="text" placeholder="Full Name">
 <input id="signupEmail" type="email" placeholder="Email">
 <input id="signupPassword" type="password" placeholder="Password (for Email signup)">
@@ -30,8 +32,9 @@ th{ background:#0a5c5a; color:white;}
 <hr>
 <p>Or Sign Up with Google (Type Name above first)</p>
 <button onclick="signupGoogle()">Sign Up with Google</button>
+
 <hr>
-<p>Already have an account?</p>
+<h3>Login</h3>
 <input id="loginEmail" type="email" placeholder="Email">
 <input id="loginPassword" type="password" placeholder="Password">
 <button onclick="loginEmail()">Login with Email</button>
@@ -73,67 +76,69 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-let currentUser=null;
+let currentUser = null;
 
-// Email Sign Up
+// ===== SIGN UP =====
 function signupEmail(){
-  const name=document.getElementById("signupName").value.trim();
-  const email=document.getElementById("signupEmail").value.trim();
-  const password=document.getElementById("signupPassword").value;
+  const name = document.getElementById("signupName").value.trim();
+  const email = document.getElementById("signupEmail").value.trim();
+  const password = document.getElementById("signupPassword").value;
   if(!name || !email || !password){ alert("All fields required"); return; }
   auth.createUserWithEmailAndPassword(email,password)
       .then(res=>res.user.updateProfile({displayName:name}))
       .catch(err=>alert(err.message));
 }
 
-// Google Sign Up
 function signupGoogle(){
-  const name=document.getElementById("signupName").value.trim();
+  const name = document.getElementById("signupName").value.trim();
   if(!name){ alert("Type your name first"); return; }
-  const provider=new firebase.auth.GoogleAuthProvider();
+  const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider)
-      .then(res=>res.user.updateProfile({displayName:name}))
-      .catch(()=>alert("Google login blocked by browser"));
+      .then(result=>{
+        const user = result.user;
+        if(!user.email){ alert("Google account missing email!"); return; }
+        user.updateProfile({displayName:name});
+      }).catch(err=>alert(err.message));
 }
 
-// Login Email
+// ===== LOGIN =====
 function loginEmail(){
   const email=document.getElementById("loginEmail").value.trim();
   const password=document.getElementById("loginPassword").value;
-  if(!email||!password){ alert("Enter login credentials"); return; }
+  if(!email || !password){ alert("Enter login credentials"); return; }
   auth.signInWithEmailAndPassword(email,password).catch(err=>alert(err.message));
 }
 
-// Login Google
 function loginGoogle(){
-  const provider=new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(()=>alert("Google login blocked by browser"));
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider)
+      .catch(err=>alert(err.message));
 }
 
-// Auth State
+// ===== AUTH STATE =====
 auth.onAuthStateChanged(user=>{
   if(user){
-    currentUser=user;
-    document.getElementById("signupBox").classList.add("hidden");
+    currentUser = user;
+    document.getElementById("authBox").classList.add("hidden");
     document.getElementById("site").classList.remove("hidden");
-    document.getElementById("welcome").innerText="Welcome, "+(user.displayName||user.email);
+    document.getElementById("welcome").innerText = "Welcome, " + (user.displayName||user.email);
     loadBookings();
   } else {
-    document.getElementById("signupBox").classList.remove("hidden");
+    document.getElementById("authBox").classList.remove("hidden");
     document.getElementById("site").classList.add("hidden");
   }
 });
 
-// Load bookings
+// ===== BOOKING =====
 function loadBookings(){
   db.collection("bookings").orderBy("time","asc").limit(8).onSnapshot(snapshot=>{
-    const log=document.getElementById("bookingLog");
-    log.innerHTML="";
+    const log = document.getElementById("bookingLog");
+    log.innerHTML = "";
     let tuesdayBooked=false, thursdayBooked=false;
     snapshot.docs.forEach((doc,index)=>{
-      const data=doc.data();
-      const displayName=data.name||data.email;
-      log.innerHTML+=`<tr><td>${index+1}</td><td>${displayName}</td><td>${data.day}</td></tr>`;
+      const data = doc.data();
+      const displayName = data.name || data.email;
+      log.innerHTML += `<tr><td>${index+1}</td><td>${displayName}</td><td>${data.day}</td></tr>`;
       if(data.day==="Tuesday"){ tuesdayBooked=true; document.getElementById("tuesdaySlot").innerText=displayName; }
       if(data.day==="Thursday"){ thursdayBooked=true; document.getElementById("thursdaySlot").innerText=displayName; }
     });
@@ -142,26 +147,23 @@ function loadBookings(){
   });
 }
 
-// Book a day
 function bookDay(day){
   if(!currentUser){ alert("Login first"); return; }
-  const name=currentUser.displayName||currentUser.email;
+  const name=currentUser.displayName || currentUser.email;
   db.collection("bookings").get().then(snapshot=>{
     if(snapshot.size>=8){ alert("Booking limit reached"); return; }
-    const alreadyBooked=snapshot.docs.some(doc=>doc.data().day===day);
+    const alreadyBooked = snapshot.docs.some(doc=>doc.data().day===day);
     if(alreadyBooked){ alert(day+" already booked"); return; }
     db.collection("bookings").add({
-      email:currentUser.email,
-      name:name,
-      day:day,
-      time:firebase.firestore.FieldValue.serverTimestamp()
+      email: currentUser.email,
+      name: name,
+      day: day,
+      time: firebase.firestore.FieldValue.serverTimestamp()
     }).then(()=>document.getElementById("message").innerText="You booked "+day);
   });
 }
 
-// Logout
 function logout(){ auth.signOut().then(()=>location.reload()); }
 </script>
 </body>
 </html>
-
