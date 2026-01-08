@@ -1,91 +1,144 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Book My Seaweed</title>
 
-  <!-- Firebase SDK -->
+  <!-- Firebase SDKs (COMPAT for GitHub Pages) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <style>
     body {
-      font-family: Arial;
-      background: #e6f7f4;
+      font-family: Arial, sans-serif;
+      background-color: #e6f7f4;
       text-align: center;
       padding: 40px;
     }
+
     .box {
       background: white;
       padding: 30px;
       max-width: 420px;
       margin: auto;
       border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
-    button {
+
+    h1, h2 {
+      color: #0a5c5a;
+    }
+
+    input, button {
+      width: 95%;
       padding: 12px;
-      width: 100%;
       margin: 10px 0;
       font-size: 16px;
-      background: #0a5c5a;
+    }
+
+    button {
+      background-color: #0a5c5a;
       color: white;
       border: none;
       border-radius: 6px;
       cursor: pointer;
     }
-    .hidden { display: none; }
+
+    button:hover {
+      background-color: #08706d;
+    }
+
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
 
+<!-- LOGIN -->
 <div id="login" class="box">
   <h2>Login</h2>
-
   <button onclick="googleLogin()">🔐 Continue with Google</button>
+</div>
 
-  <hr>
+<!-- EMAIL + NOTIFICATION -->
+<div id="details" class="box hidden">
+  <h2>Confirm Your Details</h2>
 
-  <input id="email" placeholder="Email" style="width:95%;padding:10px;">
-  <br><br>
+  <input id="email" type="email" placeholder="Email address (required)">
+
   <label>
     <input type="checkbox" id="notify">
     Send Notification About Seaweed Booking
   </label>
+
+  <br><br>
+  <button onclick="saveDetails()">Continue</button>
 </div>
 
+<!-- MAIN SITE -->
 <div id="site" class="hidden">
   <h1>🌊 Book My Seaweed</h1>
-  <p id="userEmail"></p>
+  <p><strong>Email:</strong> <span id="userEmail"></span></p>
 
   <button onclick="book('Tuesday')">Book Tuesday</button>
   <button onclick="book('Thursday')">Book Thursday</button>
 
-  <p id="message"></p>
+  <p id="message" style="font-weight:bold;"></p>
+
+  <br>
   <button onclick="logout()">Logout</button>
 </div>
 
 <script>
-  // 🔥 REPLACE WITH YOUR FIREBASE CONFIG
+  // 🔥 Firebase configuration
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyA4txYmTD_fOvcMBmwZxWJfGn4TZFMZARM",
+    authDomain: "fir-969c9.firebaseapp.com",
+    projectId: "fir-969c9",
+    messagingSenderId: "204881578678",
+    appId: "1:204881578678:web:153f8349b5774bcfe97417"
   };
 
+  // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
+  const db = firebase.firestore();
 
+  let currentUser = null;
+
+  // Watch auth state
   auth.onAuthStateChanged(user => {
     if (user) {
+      currentUser = user;
       document.getElementById("login").style.display = "none";
-      document.getElementById("site").classList.remove("hidden");
-      document.getElementById("userEmail").innerText = user.email;
+      checkUserDetails();
     }
   });
 
+  // Google login
   function googleLogin() {
-    const email = document.getElementById("email").value;
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+      .catch(err => alert(err.message));
+  }
+
+  // Check if user already saved email
+  function checkUserDetails() {
+    db.collection("users").doc(currentUser.uid).get()
+      .then(doc => {
+        if (doc.exists) {
+          showSite(doc.data().email);
+        } else {
+          document.getElementById("details").classList.remove("hidden");
+        }
+      });
+  }
+
+  // Save email + notification preference
+  function saveDetails() {
+    const email = document.getElementById("email").value.trim();
     const notify = document.getElementById("notify").checked;
 
     if (!email) {
@@ -93,28 +146,35 @@
       return;
     }
 
-    localStorage.setItem("notify", notify);
-    localStorage.setItem("email", email);
-
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
+    db.collection("users").doc(currentUser.uid).set({
+      email: email,
+      notify: notify
+    }).then(() => {
+      showSite(email);
+    });
   }
 
-  function logout() {
-    auth.signOut();
-    location.reload();
+  // Show main site
+  function showSite(email) {
+    document.getElementById("details").style.display = "none";
+    document.getElementById("site").classList.remove("hidden");
+    document.getElementById("userEmail").innerText = email;
   }
 
+  // Booking
   function book(day) {
-    const notify = localStorage.getItem("notify") === "true";
     document.getElementById("message").innerText =
-      notify
-        ? `✅ Seaweed booked for ${day}. Notification will be sent.`
-        : `✅ Seaweed booked for ${day}.`;
+      "✅ Seaweed booked for " + day + "!";
+  }
+
+  // Logout
+  function logout() {
+    auth.signOut().then(() => location.reload());
   }
 </script>
 
 </body>
 </html>
+
 
 
